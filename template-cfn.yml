@@ -1,0 +1,73 @@
+# Template format version 2010-09-09
+AWSTemplateFormatVersion: 2010-09-09
+
+######################################################################################
+# Describe the template (optional)
+Description: |
+  Cloudformation Template for Kittens Carousel Project that creates an EC2 instance of type t2.micro and a Security Group...
+
+
+
+#######################################################################################
+Resources:
+# create a security group (Resources)
+# security group open inbound port http (80) and ssh (22) ( SecurityGroupIngressRules)
+  WebServerSG: 
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow traffic through port 80 and 22
+      SecurityGroupIngress:
+        - CidrIp: "0.0.0.0/0"
+          FromPort: 80
+          ToPort: 80
+          IpProtocol: tcp
+        - CidrIp: "0.0.0.0/0"
+          FromPort: 22
+          ToPort: 22
+          IpProtocol: tcp
+        
+
+
+# create an ec2 instance with type t2.micro (Resources)
+
+# define a user data script (UserData)
+# install apache web server
+# copy the static file from our github repo
+# start apache web server
+
+  WebServer: 
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-06e46074ae430fba6
+      KeyName: claruswaykey
+      InstanceType: t2.micro
+      SecurityGroupIds:
+        - !Ref WebServerSG
+      Tags:
+        - Key: name
+          Value: !Sub WebServer of stack s{AWS::StackName}
+      UserData:
+        Fn::Base64: | 
+          #!/bin/bash
+          yum update -y 
+          yum install httpd -y 
+
+          FOLDER="https://raw.githubusercontent.com/SamirElkettani/KittensCarouselProject/main/static-web"
+
+          cd /var/www/html
+
+          wget $FOLDER/index.html
+          wget $FOLDER/cat0.jpg
+          wget $FOLDER/cat1.jpg
+          wget $FOLDER/cat2.jpg
+          wget $FOLDER/cat3.png
+
+          systemctl enable httpd
+          systemctl start httpd
+Outputs:
+  WebServerPublicDNS:
+    Description: Public DNS Name of Kittens Web Server
+    Value: !Sub 
+      - http://${PublicDNS}
+      - PublicDNS: !GetAtt WebServer.PublicDnsName
+
